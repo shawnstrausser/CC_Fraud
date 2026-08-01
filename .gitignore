@@ -1,3 +1,7 @@
 creditcard.csv
 .ipynb_checkpoints/
 __pycache__/
+
+# never commit credentials or data
+.aws/
+*.csv
