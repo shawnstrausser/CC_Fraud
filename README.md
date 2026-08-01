@@ -4,13 +4,8 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 
 ## Setup
 
-```
-pip install -r requirements.txt
-```
+Download `creditcard.csv` from Kaggle and drop it in this folder (gitignored — ~150MB).
 
-Download `creditcard.csv` from Kaggle and place it in `data/` (not committed — ~150MB).
+Needs: `pandas`, `scikit-learn`, `matplotlib`, `seaborn`, `jupyter`.
 
-## Structure
-
-- `data/` — raw dataset (gitignored)
-- `notebooks/` — EDA and modeling
+Everything lives in `fraud.ipynb`.
