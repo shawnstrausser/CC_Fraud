@@ -5,3 +5,6 @@ __pycache__/
 # never commit credentials or data
 .aws/
 *.csv
+
+# transient user-data files from scripts/launch.sh
+.userdata.*.tmp
