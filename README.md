@@ -6,7 +6,7 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 
 | Path | What |
 |---|---|
-| `fraud.ipynb` | EDA (train split only — see protocol below) |
+| `EDA.ipynb` | EDA (train split only — see protocol below) |
 | `data.py` | One-time frozen train/test split |
 | `train.py` | Fit + save the model artifact (`model.joblib` + `train_meta.json`) |
 | `evaluate.py` | Score a saved model on any dataset → `metrics.json`; also the one-shot test evaluator |
@@ -35,7 +35,7 @@ Note the base-rate mismatch between train and test — possibly real non-station
 
 Baseline (logreg, unweighted): train PR-AUC 0.770, recall@0.5 0.62 (misses 158/417 train frauds). The one initial test eval showed a negligible train–test gap → diagnosis: underfitting, not overfitting. Test metrics are deliberately not recorded here — we iterate against train/validation only and touch test.csv again at final model comparison.
 
-EDA findings (fraud.ipynb): fraud-rate spikes at night while volume is diurnal (burstiness, not smooth drift); fraud Amount is bimodal (~$1 card-testing + ~$120 cash-out); top univariate separators V17, V14, V12, V10, V16, V3 — all "narrow legit spike vs wide left fraud smear"; V-V correlations ≈ 0 (PCA), Amount correlates with V2/V5/V7/V20.
+EDA findings (EDA.ipynb): fraud-rate spikes at night while volume is diurnal (burstiness, not smooth drift); fraud Amount is bimodal (~$1 card-testing + ~$120 cash-out); top univariate separators V17, V14, V12, V10, V16, V3 — all "narrow legit spike vs wide left fraud smear"; V-V correlations ≈ 0 (PCA), Amount correlates with V2/V5/V7/V20.
 
 ## Backlog
 
@@ -52,7 +52,7 @@ EDA findings (fraud.ipynb): fraud-rate spikes at night while volume is diurnal (
    - Transactions-per-hour (activity context — computable at serving time from recent traffic).
    - Fraud-rate-per-hour-of-day — ⚠ uses labels → target-encoding leakage risk: compute the rates on training folds only, never on the row's own fold, and only from past data at serving time.
    - Pairwise products of the EDA shortlist (V17, V14, V12, V10, V16, V3) — 15 interaction features to let the linear model see "jointly moderate" frauds.
-9. When notebook history gets heavy: commit `fraud.ipynb` with outputs stripped and save key figures as PNGs in `figures/` (git keeps every historical output blob forever).
+9. When notebook history gets heavy: commit `EDA.ipynb` with outputs stripped and save key figures as PNGs in `figures/` (git keeps every historical output blob forever).
 
 (Plus the walk-forward validation TODO above.)
 

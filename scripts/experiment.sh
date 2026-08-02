@@ -6,7 +6,7 @@
 #   bash scripts/experiment.sh <RUN_NAME> [train.py options...]
 #   bash scripts/experiment.sh logreg-baseline
 #   bash scripts/experiment.sh logreg-balanced --class-weight balanced
-#   bash scripts/experiment.sh eda-refresh --notebook     (re-executes fraud.ipynb instead)
+#   bash scripts/experiment.sh eda-refresh --notebook     (re-executes EDA.ipynb instead)
 #
 # Results land in results/<RUN_NAME>/ locally AND s3://.../results/<RUN_NAME>/.
 set -euo pipefail
@@ -55,10 +55,10 @@ done
 
 # --- Run remotely ------------------------------------------------------------
 if [ "$NOTEBOOK" -eq 1 ]; then
-  echo "Re-executing fraud.ipynb remotely..."
+  echo "Re-executing EDA.ipynb remotely..."
   ssh "${SSH_OPTS[@]}" ec2-user@"$IP" \
-    "cd CC_Fraud && python3.11 -m jupyter nbconvert --to notebook --execute --inplace fraud.ipynb"
-  scp "${SSH_OPTS[@]}" ec2-user@"$IP":CC_Fraud/fraud.ipynb "$REPO_DIR/fraud.ipynb"
+    "cd CC_Fraud && python3.11 -m jupyter nbconvert --to notebook --execute --inplace EDA.ipynb"
+  scp "${SSH_OPTS[@]}" ec2-user@"$IP":CC_Fraud/EDA.ipynb "$REPO_DIR/EDA.ipynb"
   echo "Notebook fetched. Review, then commit+push it yourself."
 else
   echo "Run '$RUN_NAME' ($SCRIPT) with args: ${TRAIN_ARGS[*]:-(none)}"

@@ -80,7 +80,7 @@ aws ec2 describe-instances --filters Name=instance-state-name,Values=running,pen
 `bash scripts/connect.sh -t`, then on the server `python3.11 -m jupyter lab --no-browser`, then open the printed token URL in the laptop browser. The notebook file saves on the SERVER — commit/push or `scp` it back before teardown:
 
 ```bash
-scp -i ~/.ssh/cc-fraud-key.pem ec2-user@<PUBLIC_IP>:CC_Fraud/fraud.ipynb .
+scp -i ~/.ssh/cc-fraud-key.pem ec2-user@<PUBLIC_IP>:CC_Fraud/EDA.ipynb .
 ```
 
 ## Gotchas learned the hard way
