@@ -8,3 +8,6 @@ __pycache__/
 
 # transient user-data files from scripts/launch.sh
 .userdata.*.tmp
+
+# model artifacts live in S3 (results/<RUN_NAME>/), not git
+*.joblib

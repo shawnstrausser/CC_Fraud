@@ -8,7 +8,8 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 |---|---|
 | `fraud.ipynb` | EDA (train split only — see protocol below) |
 | `data.py` | One-time frozen train/test split |
-| `train.py` | Baseline model (logreg); the run contract for all models |
+| `train.py` | Fit + save the model artifact (`model.joblib` + `train_meta.json`) |
+| `evaluate.py` | Score a saved model on any dataset → `metrics.json`; also the one-shot test evaluator |
 | `scripts/` | Session automation: `session.sh`, `launch.sh`, `connect.sh`, `teardown.sh` |
 | `infra/` | IAM policy documents |
 | `docs/runbook.md` | **The AWS runbook**: setup, per-session commands, gotchas |
@@ -42,9 +43,9 @@ EDA findings (fraud.ipynb): fraud-rate spikes at night while volume is diurnal (
 2. XGBoost — capacity jump; also the model that can use the GPU (`device="cuda"`) on the approved g4dn.xlarge.
 3. Batch-job pattern — ✅ built as the SSH-driven orchestrator `scripts/experiment.sh` (one command: launch → run → fetch → teardown, teardown guaranteed by trap). Still open: the fire-and-forget user-data variant (self-terminating instance) for runs that should survive the laptop sleeping.
 4. Imbalance-strategy comparison (on train-eval; no validation set — scope decision 2026-08-02): class weighting (✗ rejected — PR-AUC down, NE 8.0, calibration 42×) vs negative downsampling vs plain threshold tuning. Keep a strategy only if it lifts the PR curve, not just the operating point. Note: downsampling changes the base rate → recalibrate probabilities (or correct analytically) before comparing threshold metrics.
-5. Report model weights in metrics.json — for logreg, the 30 coefficients (on scaled features they double as rough feature importances) + intercept.
-6. Persist the model artifact itself every run so it can be deployed (currently only metrics are saved — the baseline model died with the server). `joblib.dump` the sklearn pipeline (scaler + model together — coefficients are meaningless without the scaler's train-set means/stds), upload to `s3://…/results/RUN_NAME/model.joblib` beside metrics.json. Deployment then = download artifact + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
-7. Record the git commit hash in metrics.json (`git rev-parse --short HEAD`) so every result links to the exact code that produced it. Delete the now-retired `code/` folder from S3.
+5. Report model weights in metrics.json — partially superseded: weights are now inspectable by loading `model.joblib` (`pipe.named_steps["model"].coef_`); still open if we want them printed in metrics.
+6. ✅ Persist the model artifact every run — `train.py` saves the sklearn Pipeline (scaler + model) as `model.joblib`, uploaded to `s3://…/results/RUN_NAME/` beside metrics.json. Deployment = download + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
+7. ✅ Provenance — `train_meta.json` records the git commit (embedded into metrics.json by `evaluate.py`); S3 `code/` folder deleted.
 8. New features from the EDA (judged on train-eval PR-AUC; final verdict at the one-shot test comparison):
    - Time-of-day bucketized into morning / afternoon / night (one-hot). The EDA showed fraud-rate spikes at night.
    - Hour-of-day as the cyclic pair `hour_sin` + `hour_cos` (keep both as separate features — their *ratio* is tan(), which blows up twice a day at cos=0 and repeats every 12h; the pair encodes the clock cleanly).

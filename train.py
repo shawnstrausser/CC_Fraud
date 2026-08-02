@@ -1,31 +1,32 @@
-"""Train a fraud model on the frozen split.
+"""Train a fraud model on the frozen split and save it as an artifact.
 
 Usage:
-    python train.py <train_csv> <output_dir> [--class-weight balanced]
+    python train.py <train_csv> <out_dir> [--class-weight balanced]
 
-One run = one configuration = one metrics.json (which records the config).
-Evaluates on TRAINING data — fit quality, not generalization; the frozen
-test.csv stays untouched until final model comparison.
+Fits a sklearn Pipeline (scaler + model fused) and writes:
+    model.joblib     - the trained pipeline: raw features in, probability out
+    train_meta.json  - config + provenance (git commit, timing, data counts)
+Metrics are evaluate.py's job.
 """
 import json
+import subprocess
 import time
 from pathlib import Path
 
 import click
-import numpy as np
+import joblib
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    average_precision_score,
-    confusion_matrix,
-    log_loss,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-)
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-THRESHOLD = 0.5
+
+def git_commit():
+    try:
+        return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                              capture_output=True, text=True, check=True).stdout.strip()
+    except Exception:
+        return "unknown"
 
 
 @click.command(help=__doc__)
@@ -38,54 +39,34 @@ def main(train_csv, out_dir, class_weight):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     train = pd.read_csv(train_csv)
-    X_train, y_train = train.drop(columns=["Class"]), train["Class"]
+    X, y = train.drop(columns=["Class"]), train["Class"]
 
-    # Logistic regression needs features on comparable scales to converge.
-    scaler = StandardScaler().fit(X_train)
-    model = LogisticRegression(
-        max_iter=1000,
-        class_weight=None if class_weight == "none" else class_weight,
-    )
+    # One artifact = preprocessing + model. A model saved without its scaler
+    # is corrupted in a way you only discover at prediction time.
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", LogisticRegression(
+            max_iter=1000,
+            class_weight=None if class_weight == "none" else class_weight,
+        )),
+    ])
     t0 = time.perf_counter()
-    model.fit(scaler.transform(X_train), y_train)
+    pipeline.fit(X, y)
     train_seconds = time.perf_counter() - t0
 
-    proba = model.predict_proba(scaler.transform(X_train))[:, 1]
-    pred = proba >= THRESHOLD
-
-    # Normalized entropy (Meta's CTR metric): log loss divided by the log loss
-    # of always predicting the base rate. < 1 beats the base-rate guess; lower
-    # is better. Calibration-sensitive, unlike the AUCs.
-    base_rate = y_train.mean()
-    base_entropy = -(base_rate * np.log(base_rate) + (1 - base_rate) * np.log(1 - base_rate))
-    normalized_entropy = log_loss(y_train, proba) / base_entropy
-
-    metrics = {
+    joblib.dump(pipeline, out_dir / "model.joblib")
+    meta = {
         "model": "logistic_regression",
-        "config": {
-            "class_weight": class_weight,
-            "threshold": THRESHOLD,
-            "max_iter": 1000,
-        },
-        "split": "time_based_80_20_frozen",
-        "evaluated_on": "train",
-        "eval_frauds": int(y_train.sum()),
+        "config": {"class_weight": class_weight, "max_iter": 1000},
+        "train_csv": str(train_csv),
+        "train_rows": len(train),
+        "train_frauds": int(y.sum()),
         "train_seconds": round(train_seconds, 2),
-        "roc_auc": roc_auc_score(y_train, proba),
-        "pr_auc": average_precision_score(y_train, proba),
-        "normalized_entropy": normalized_entropy,
-        # Mean predicted probability over the true base rate: 1.0 = calibrated
-        # on average, >1 = overpredicts fraud, <1 = underpredicts.
-        "calibration_ratio": float(proba.mean() / base_rate),
-        f"at_threshold_{THRESHOLD}": {
-            "precision": precision_score(y_train, pred, zero_division=0),
-            "recall": recall_score(y_train, pred),
-            "confusion_matrix": confusion_matrix(y_train, pred).tolist(),
-        },
+        "git_commit": git_commit(),
     }
-
-    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    click.echo(json.dumps(metrics, indent=2))
+    (out_dir / "train_meta.json").write_text(json.dumps(meta, indent=2))
+    click.echo(json.dumps(meta, indent=2))
+    click.echo(f"saved {out_dir}/model.joblib")
 
 
 if __name__ == "__main__":

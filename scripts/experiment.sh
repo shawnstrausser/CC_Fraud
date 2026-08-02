@@ -62,9 +62,15 @@ if [ "$NOTEBOOK" -eq 1 ]; then
   echo "Notebook fetched. Review, then commit+push it yourself."
 else
   echo "Run '$RUN_NAME' ($SCRIPT) with args: ${TRAIN_ARGS[*]:-(none)}"
+  if [ "$SCRIPT" = "train.py" ]; then
+    # Default: train (saves model.joblib) then evaluate it on the train data.
+    REMOTE="python3.11 train.py train.csv out/ ${TRAIN_ARGS[*]:-} \
+      && python3.11 evaluate.py out/model.joblib train.csv out/"
+  else
+    REMOTE="python3.11 $SCRIPT train.csv out/ ${TRAIN_ARGS[*]:-}"
+  fi
   ssh "${SSH_OPTS[@]}" ec2-user@"$IP" \
-    "cd CC_Fraud && python3.11 $SCRIPT train.csv out/ ${TRAIN_ARGS[*]:-} \
-     && aws s3 cp out/ $BUCKET/results/$RUN_NAME/ --recursive"
+    "cd CC_Fraud && $REMOTE && aws s3 cp out/ $BUCKET/results/$RUN_NAME/ --recursive"
   mkdir -p "$REPO_DIR/results/$RUN_NAME"
   scp -r "${SSH_OPTS[@]}" ec2-user@"$IP":"CC_Fraud/out/*" "$REPO_DIR/results/$RUN_NAME/"
   echo "--- fetched into results/$RUN_NAME/:"
