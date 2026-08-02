@@ -28,6 +28,12 @@ Baseline (logreg, unweighted): train PR-AUC 0.770, recall@0.5 0.62 (misses 158/4
 5. Report model weights in metrics.json — for logreg, the 30 coefficients (on scaled features they double as rough feature importances) + intercept.
 6. Persist the model artifact itself every run so it can be deployed (currently only metrics are saved — the baseline model died with the server). `joblib.dump` the sklearn pipeline (scaler + model together — coefficients are meaningless without the scaler's train-set means/stds), upload to `s3://…/results/RUN_NAME/model.joblib` beside metrics.json. Deployment then = download artifact + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
 7. Record the git commit hash in metrics.json (`git rev-parse --short HEAD`) so every result links to the exact code that produced it. Delete the now-retired `code/` folder from S3.
+8. New features from the EDA (judged on validation PR-AUC, per protocol):
+   - Time-of-day bucketized into morning / afternoon / night (one-hot). The EDA showed fraud-rate spikes at night.
+   - Hour-of-day as the cyclic pair `hour_sin` + `hour_cos` (keep both as separate features — their *ratio* is tan(), which blows up twice a day at cos=0 and repeats every 12h; the pair encodes the clock cleanly).
+   - Transactions-per-hour (activity context — computable at serving time from recent traffic).
+   - Fraud-rate-per-hour-of-day — ⚠ uses labels → target-encoding leakage risk: compute the rates on training folds only, never on the row's own fold, and only from past data at serving time.
+   - Pairwise products of the EDA shortlist (V17, V14, V12, V10, V16, V3) — 15 interaction features to let the linear model see "jointly moderate" frauds.
 
 (Plus the walk-forward validation TODO above.)
 
