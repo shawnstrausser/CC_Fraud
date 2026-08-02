@@ -39,7 +39,7 @@ set -x
 dnf -y install git python3.11 python3.11-pip
 sudo -u ec2-user bash -c '
   cd ~
-  python3.11 -m pip install --user jupyterlab pandas scikit-learn matplotlib seaborn xgboost
+  python3.11 -m pip install --user jupyterlab pandas scikit-learn matplotlib seaborn xgboost click
   git clone $REPO
   cd CC_Fraud
   aws s3 cp $BUCKET/data/train.csv .
