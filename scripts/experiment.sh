@@ -19,10 +19,17 @@ PEM=~/.ssh/cc-fraud-key.pem
 BUCKET="s3://cc-fraud-381491853558"
 SSH_OPTS=(-i "$PEM" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
 
-RUN_NAME="${1:?usage: experiment.sh <RUN_NAME> [train.py options...]}"
+RUN_NAME="${1:?usage: experiment.sh <RUN_NAME> [--script foo.py] [--notebook] [script options...]}"
 shift
 NOTEBOOK=0
-if [ "${1:-}" = "--notebook" ]; then NOTEBOOK=1; shift; fi
+SCRIPT="train.py"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --notebook) NOTEBOOK=1; shift ;;
+    --script)   SCRIPT="$2"; shift 2 ;;
+    *) break ;;
+  esac
+done
 TRAIN_ARGS=("$@")
 
 # --- Safety: servers only run committed, pushed code -------------------------
@@ -54,13 +61,16 @@ if [ "$NOTEBOOK" -eq 1 ]; then
   scp "${SSH_OPTS[@]}" ec2-user@"$IP":CC_Fraud/fraud.ipynb "$REPO_DIR/fraud.ipynb"
   echo "Notebook fetched. Review, then commit+push it yourself."
 else
-  echo "Training run '$RUN_NAME' with args: ${TRAIN_ARGS[*]:-(none)}"
+  echo "Run '$RUN_NAME' ($SCRIPT) with args: ${TRAIN_ARGS[*]:-(none)}"
   ssh "${SSH_OPTS[@]}" ec2-user@"$IP" \
-    "cd CC_Fraud && python3.11 train.py train.csv out/ ${TRAIN_ARGS[*]:-} \
-     && aws s3 cp out/metrics.json $BUCKET/results/$RUN_NAME/metrics.json"
+    "cd CC_Fraud && python3.11 $SCRIPT train.csv out/ ${TRAIN_ARGS[*]:-} \
+     && aws s3 cp out/ $BUCKET/results/$RUN_NAME/ --recursive"
   mkdir -p "$REPO_DIR/results/$RUN_NAME"
-  scp "${SSH_OPTS[@]}" ec2-user@"$IP":CC_Fraud/out/metrics.json "$REPO_DIR/results/$RUN_NAME/metrics.json"
-  echo "--- results/$RUN_NAME/metrics.json:"
-  cat "$REPO_DIR/results/$RUN_NAME/metrics.json"
+  scp -r "${SSH_OPTS[@]}" ec2-user@"$IP":"CC_Fraud/out/*" "$REPO_DIR/results/$RUN_NAME/"
+  echo "--- fetched into results/$RUN_NAME/:"
+  ls "$REPO_DIR/results/$RUN_NAME"
+  if [ -f "$REPO_DIR/results/$RUN_NAME/metrics.json" ]; then
+    cat "$REPO_DIR/results/$RUN_NAME/metrics.json"
+  fi
 fi
 # trap fires here -> teardown + paranoia sweep
