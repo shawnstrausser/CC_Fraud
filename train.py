@@ -12,11 +12,13 @@ import time
 from pathlib import Path
 
 import click
+import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
+    log_loss,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -51,6 +53,13 @@ def main(train_csv, out_dir, class_weight):
     proba = model.predict_proba(scaler.transform(X_train))[:, 1]
     pred = proba >= THRESHOLD
 
+    # Normalized entropy (Meta's CTR metric): log loss divided by the log loss
+    # of always predicting the base rate. < 1 beats the base-rate guess; lower
+    # is better. Calibration-sensitive, unlike the AUCs.
+    base_rate = y_train.mean()
+    base_entropy = -(base_rate * np.log(base_rate) + (1 - base_rate) * np.log(1 - base_rate))
+    normalized_entropy = log_loss(y_train, proba) / base_entropy
+
     metrics = {
         "model": "logistic_regression",
         "config": {
@@ -64,6 +73,10 @@ def main(train_csv, out_dir, class_weight):
         "train_seconds": round(train_seconds, 2),
         "roc_auc": roc_auc_score(y_train, proba),
         "pr_auc": average_precision_score(y_train, proba),
+        "normalized_entropy": normalized_entropy,
+        # Mean predicted probability over the true base rate: 1.0 = calibrated
+        # on average, >1 = overpredicts fraud, <1 = underpredicts.
+        "calibration_ratio": float(proba.mean() / base_rate),
         f"at_threshold_{THRESHOLD}": {
             "precision": precision_score(y_train, pred, zero_division=0),
             "recall": recall_score(y_train, pred),
