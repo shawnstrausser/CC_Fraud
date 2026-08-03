@@ -9,9 +9,13 @@ import numpy as np
 
 # EDA shortlist: the strongest univariate separators (fraud vs legit).
 SHORTLIST = ["V17", "V14", "V12", "V10", "V16", "V3"]
+# Mid-ranked separators (EDA §4 ranks 7-10), added after the §8 error analysis
+# to hunt faint signal in the missed-fraud cohort.
+EXTENDED = ["V7", "V11", "V4", "V18"]
 
 FAMILIES = ("time", "interactions", "log_amount", "activity",
-            "squares", "night_interactions")
+            "squares", "night_interactions",
+            "interactions_ext", "squares_ext")
 
 
 def add(df, families):
@@ -54,6 +58,19 @@ def add(df, families):
         night = ((hour >= 0) & (hour < 6)).astype("float32")
         for f in SHORTLIST:
             out[f"night_x_{f}"] = night * out[f]
+
+    if "interactions_ext" in families:
+        # The 30 pairwise products NOT covered by "interactions": every pair
+        # from SHORTLIST+EXTENDED that involves at least one EXTENDED feature.
+        both = SHORTLIST + EXTENDED
+        for i, a in enumerate(both):
+            for b in both[i + 1:]:
+                if a in EXTENDED or b in EXTENDED:
+                    out[f"{a}x{b}"] = out[a] * out[b]
+
+    if "squares_ext" in families:
+        for f in EXTENDED:
+            out[f"{f}_sq"] = out[f] ** 2
 
     if "activity" in families:
         # Transactions in this row's (absolute) hour — "how busy is the
