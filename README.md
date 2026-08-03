@@ -40,6 +40,8 @@ Frozen 80/20 time-based split (`data.py`, run once; files live in `s3://cc-fraud
 
 Note the base-rate mismatch between train and test — possibly real non-stationarity, possibly burst noise (~2σ). Consequences: with 75 test frauds, metric differences under ~3 recall points are noise; threshold-based metrics (precision/recall @ 0.5) are base-rate-sensitive and shouldn't be compared across datasets. All models eval on this same frozen test set. TODO: consider walk-forward (TimeSeriesSplit) validation inside the train portion for model tuning.
 
+External context: this Kaggle dataset has no competition, official split, or sanctioned leaderboard. Published notebook results cluster around PR-AUC 0.80–0.88, typically on **random** splits (easier than our time-based one) and often with leakage (resampling before splitting, test-set tuning, ROC-AUC headlines). Not directly comparable to our numbers; recorded here for orientation only.
+
 Baseline (logreg, unweighted): train PR-AUC 0.770, recall@0.5 0.62 (misses 158/417 train frauds). The one initial test eval showed a negligible train–test gap → diagnosis: underfitting, not overfitting. Test metrics are deliberately not recorded here — we iterate against train/validation only and touch test.csv again at final model comparison.
 
 EDA findings (EDA.ipynb): fraud-rate spikes at night while volume is diurnal (burstiness, not smooth drift); fraud Amount is bimodal (~$1 card-testing + ~$120 cash-out); top univariate separators V17, V14, V12, V10, V16, V3 — all "narrow legit spike vs wide left fraud smear"; V-V correlations ≈ 0 (PCA), Amount correlates with V2/V5/V7/V20.

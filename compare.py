@@ -5,7 +5,13 @@ Writes results/leaderboard.md (sorted by PR-AUC) and prints it.
 Stdlib-only so it runs anywhere, including this laptop.
 """
 import json
+import sys
 from pathlib import Path
+
+# Git Bash consoles default to cp1252, which can't print "→" — force UTF-8
+# so the table prints instead of crashing after the file is written.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
 RESULTS = Path(__file__).parent / "results"
 
