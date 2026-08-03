@@ -9,3 +9,7 @@ Usage: python data.py <creditcard_csv> <output_dir>
 Writes train.csv and test.csv to <output_dir>.
 
 train.py
+
+Focal loss? 
+
+The EDA notebook investigates the transaction rate and fraud rate throughout the dataset. It also plots log-scaled amount for positive and negative samples. 
