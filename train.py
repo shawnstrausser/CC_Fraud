@@ -11,6 +11,7 @@ Metrics are evaluate.py's job.
 import json
 import subprocess
 import time
+from functools import partial
 from pathlib import Path
 
 import click
@@ -18,7 +19,9 @@ import joblib
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import FunctionTransformer, StandardScaler
+
+import features
 
 
 def git_commit():
@@ -35,15 +38,21 @@ def git_commit():
 @click.option("--class-weight", type=click.Choice(["none", "balanced"]),
               default="none", show_default=True,
               help="'balanced' weights each class inversely to its frequency.")
-def main(train_csv, out_dir, class_weight):
+@click.option("--features", "feature_families", multiple=True,
+              type=click.Choice(features.FAMILIES),
+              help="Feature families to add (repeatable): --features time --features interactions")
+def main(train_csv, out_dir, class_weight, feature_families):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     train = pd.read_csv(train_csv)
     X, y = train.drop(columns=["Class"]), train["Class"]
 
-    # One artifact = preprocessing + model. A model saved without its scaler
-    # is corrupted in a way you only discover at prediction time.
+    # One artifact = feature engineering + preprocessing + model. The feature
+    # step lives INSIDE the pipeline so the saved model takes raw columns —
+    # evaluate.py and any future serving code need zero knowledge of features.
     pipeline = Pipeline([
+        ("features", FunctionTransformer(
+            partial(features.add, families=list(feature_families)))),
         ("scaler", StandardScaler()),
         ("model", LogisticRegression(
             max_iter=1000,
@@ -57,7 +66,12 @@ def main(train_csv, out_dir, class_weight):
     joblib.dump(pipeline, out_dir / "model.joblib")
     meta = {
         "model": "logistic_regression",
-        "config": {"class_weight": class_weight, "max_iter": 1000},
+        "config": {
+            "class_weight": class_weight,
+            "features": sorted(feature_families),
+            "n_input_columns": features.add(X.head(1), feature_families).shape[1],
+            "max_iter": 1000,
+        },
         "train_csv": str(train_csv),
         "train_rows": len(train),
         "train_frauds": int(y.sum()),

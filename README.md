@@ -52,12 +52,16 @@ EDA findings (EDA.ipynb): fraud-rate spikes at night while volume is diurnal (bu
 5. Report model weights in eval output — partially superseded: weights are now inspectable by loading `model.joblib` (`pipe.named_steps["model"].coef_`); still open if we want them printed.
 6. ✅ Persist the model artifact every run — `train.py` saves the sklearn Pipeline (scaler + model) as `model.joblib`, uploaded to `s3://…/results/RUN_NAME/` beside eval_metadata.json. Deployment = download + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
 7. ✅ Provenance — `train_metadata.json` records the git commit (embedded into eval_metadata.json by `evaluate.py`); S3 `code/` folder deleted.
-8. New features from the EDA (judged on train-eval PR-AUC; final verdict at the one-shot test comparison):
-   - Time-of-day bucketized into morning / afternoon / night (one-hot). The EDA showed fraud-rate spikes at night.
-   - Hour-of-day as the cyclic pair `hour_sin` + `hour_cos` (keep both as separate features — their *ratio* is tan(), which blows up twice a day at cos=0 and repeats every 12h; the pair encodes the clock cleanly).
-   - Transactions-per-hour (activity context — computable at serving time from recent traffic).
-   - Fraud-rate-per-hour-of-day — ⚠ uses labels → target-encoding leakage risk: compute the rates on training folds only, never on the row's own fold, and only from past data at serving time.
-   - Pairwise products of the EDA shortlist (V17, V14, V12, V10, V16, V3) — 15 interaction features to let the linear model see "jointly moderate" frauds.
+8. New features from the EDA (judged on train-eval PR-AUC; final verdict at the one-shot test comparison). Implemented in `features.py` behind `train.py --features`, applied INSIDE the saved pipeline (artifact takes raw columns):
+   - ✅ `time`: hour_sin/hour_cos cyclic pair + night/morning one-hots (afternoon = reference class).
+   - ✅ `interactions`: 15 pairwise products of the EDA shortlist (V17, V14, V12, V10, V16, V3).
+   - ✅ `log_amount`: log1p(Amount) — heatmap says partially redundant; testing to confirm.
+   - ✅ `activity`: transactions-per-hour (system busyness; label-free).
+   - ⏸ Fraud-rate-per-hour-of-day — DEFERRED because it is *target encoding*, which leaks in three subtle ways:
+     1. **Self-leak:** computed naively, each row's own label participates in its own feature (a fraud row sees a slightly higher bucket rate *because it's in the bucket* — degenerate case: a 1-row bucket makes the feature literally equal the label). Fix requires out-of-fold encoding: a row's rate comes only from rows in other folds.
+     2. **Time-travel leak:** a rate computed over the whole training window gives Monday's rows knowledge of Thursday's frauds; at serving time only past data exists. Fix requires causal (expanding/rolling, strictly-before-t) computation.
+     3. **Noise:** 417 frauds ÷ 24 hourly buckets ≈ 17 per bucket — rates are mostly variance; needs smoothing toward the global rate.
+     The killer given our protocol: we evaluate on train only, and target-encoded features shine on train *precisely when they leak* — genuine signal and leakage are indistinguishable there. Revisit only with all three fixes built.
 9. When notebook history gets heavy: commit `EDA.ipynb` with outputs stripped and save key figures as PNGs in `figures/` (git keeps every historical output blob forever).
 
 (Plus the walk-forward validation TODO above.)
