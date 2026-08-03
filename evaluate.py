@@ -3,8 +3,8 @@
 Usage:
     python evaluate.py <model_joblib> <csv> <out_dir> [--threshold 0.5]
 
-Loads the pipeline artifact, scores the dataset, and writes metrics.json.
-train_meta.json found beside the model is embedded, so every metrics file
+Loads the pipeline artifact, scores the dataset, and writes eval_metadata.json.
+train_metadata.json found beside the model is embedded, so every evaluation record
 names its own config and git commit. This one script serves both train-eval
 during iteration and the one-shot final test evaluation — the grader can
 never drift between practice and the exam.
@@ -45,7 +45,7 @@ def main(model_joblib, csv, out_dir, threshold):
     base_entropy = -(base_rate * np.log(base_rate)
                      + (1 - base_rate) * np.log(1 - base_rate))
 
-    meta_path = model_joblib.parent / "train_meta.json"
+    meta_path = model_joblib.parent / "train_metadata.json"
     meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
 
     metrics = {
@@ -66,7 +66,7 @@ def main(model_joblib, csv, out_dir, threshold):
             "confusion_matrix": confusion_matrix(y, pred).tolist(),
         },
     }
-    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    (out_dir / "eval_metadata.json").write_text(json.dumps(metrics, indent=2))
     click.echo(json.dumps(metrics, indent=2))
 
 

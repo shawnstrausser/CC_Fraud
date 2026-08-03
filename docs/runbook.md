@@ -67,7 +67,7 @@ python3.11 -m pip install pandas scikit-learn
 git clone https://github.com/shawnstrausser/CC_Fraud.git && cd CC_Fraud
 aws s3 cp s3://cc-fraud-381491853558/data/train.csv .
 python3.11 train.py train.csv out_train/
-aws s3 cp out_train/metrics.json s3://cc-fraud-381491853558/results/<RUN_NAME>/metrics.json
+aws s3 cp out_train/eval_metadata.json s3://cc-fraud-381491853558/results/<RUN_NAME>/eval_metadata.json
 
 # 3. Terminate and VERIFY (meter stops)
 aws ec2 terminate-instances --instance-ids <INSTANCE_ID>

@@ -5,7 +5,7 @@ Usage:
 
 Fits a sklearn Pipeline (scaler + model fused) and writes:
     model.joblib     - the trained pipeline: raw features in, probability out
-    train_meta.json  - config + provenance (git commit, timing, data counts)
+    train_metadata.json  - config + provenance (git commit, timing, data counts)
 Metrics are evaluate.py's job.
 """
 import json
@@ -64,7 +64,7 @@ def main(train_csv, out_dir, class_weight):
         "train_seconds": round(train_seconds, 2),
         "git_commit": git_commit(),
     }
-    (out_dir / "train_meta.json").write_text(json.dumps(meta, indent=2))
+    (out_dir / "train_metadata.json").write_text(json.dumps(meta, indent=2))
     click.echo(json.dumps(meta, indent=2))
     click.echo(f"saved {out_dir}/model.joblib")
 

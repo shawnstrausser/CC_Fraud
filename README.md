@@ -8,8 +8,8 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 |---|---|
 | `EDA.ipynb` | EDA (train split only — see protocol below) |
 | `data.py` | One-time frozen train/test split |
-| `train.py` | Fit + save the model artifact (`model.joblib` + `train_meta.json`) |
-| `evaluate.py` | Score a saved model on any dataset → `metrics.json`; also the one-shot test evaluator |
+| `train.py` | Fit + save the model artifact (`model.joblib` + `train_metadata.json`) |
+| `evaluate.py` | Score a saved model on any dataset → `eval_metadata.json`; also the one-shot test evaluator |
 | `scripts/` | Session automation: `session.sh`, `launch.sh`, `connect.sh`, `teardown.sh` |
 | `infra/` | IAM policy documents |
 | `docs/runbook.md` | **The AWS runbook**: setup, per-session commands, gotchas |
@@ -23,6 +23,12 @@ bash scripts/session.sh [-t]             # launch -> provision -> connect; -t = 
 ```
 
 Details, manual fallbacks, and hard-won gotchas: [docs/runbook.md](docs/runbook.md).
+
+## Design decisions
+
+- **Every run's artifact is a pair: model binary + sidecar metadata** (`model.joblib` + `train_metadata.json`). The metadata is the model's *passport* — config, training data, git commit — readable without Python, and it travels with the artifact even if no evaluation ever runs. Evaluations are separate, repeatable events: one model can have many `eval_metadata.json` records (train-eval today, the one-shot test eval later), each embedding a copy of the passport so every record is self-describing. The duplication is deliberate denormalization. This is the standard industry shape — MLflow and friends store exactly this pair, for exactly these reasons. (Decided 2026-08-02.)
+- **git for code, S3 for data/artifacts; small human-readable results (JSON/PNG) live in both** — git for visibility next to the code, S3 as system of record. Models and datasets are S3-only (`*.joblib`, `*.csv` gitignored).
+- **Notebooks think, scripts produce:** `EDA.ipynb` is for humans forming hypotheses; anything run twice or archived (`train.py`, `evaluate.py`, `learning_curve.py`) is a click-CLI script. Code graduates from notebook to script when it hardens into a procedure.
 
 ## Evaluation protocol
 
@@ -43,9 +49,9 @@ EDA findings (EDA.ipynb): fraud-rate spikes at night while volume is diurnal (bu
 2. XGBoost — capacity jump; also the model that can use the GPU (`device="cuda"`) on the approved g4dn.xlarge.
 3. Batch-job pattern — ✅ built as the SSH-driven orchestrator `scripts/experiment.sh` (one command: launch → run → fetch → teardown, teardown guaranteed by trap). Still open: the fire-and-forget user-data variant (self-terminating instance) for runs that should survive the laptop sleeping.
 4. Imbalance-strategy comparison (on train-eval; no validation set — scope decision 2026-08-02): class weighting (✗ rejected — PR-AUC down, NE 8.0, calibration 42×) vs negative downsampling vs plain threshold tuning. Keep a strategy only if it lifts the PR curve, not just the operating point. Note: downsampling changes the base rate → recalibrate probabilities (or correct analytically) before comparing threshold metrics.
-5. Report model weights in metrics.json — partially superseded: weights are now inspectable by loading `model.joblib` (`pipe.named_steps["model"].coef_`); still open if we want them printed in metrics.
-6. ✅ Persist the model artifact every run — `train.py` saves the sklearn Pipeline (scaler + model) as `model.joblib`, uploaded to `s3://…/results/RUN_NAME/` beside metrics.json. Deployment = download + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
-7. ✅ Provenance — `train_meta.json` records the git commit (embedded into metrics.json by `evaluate.py`); S3 `code/` folder deleted.
+5. Report model weights in eval output — partially superseded: weights are now inspectable by loading `model.joblib` (`pipe.named_steps["model"].coef_`); still open if we want them printed.
+6. ✅ Persist the model artifact every run — `train.py` saves the sklearn Pipeline (scaler + model) as `model.joblib`, uploaded to `s3://…/results/RUN_NAME/` beside eval_metadata.json. Deployment = download + `joblib.load` + `predict_proba` behind whatever serves it (batch script, Lambda, or an endpoint — decide when we get there).
+7. ✅ Provenance — `train_metadata.json` records the git commit (embedded into eval_metadata.json by `evaluate.py`); S3 `code/` folder deleted.
 8. New features from the EDA (judged on train-eval PR-AUC; final verdict at the one-shot test comparison):
    - Time-of-day bucketized into morning / afternoon / night (one-hot). The EDA showed fraud-rate spikes at night.
    - Hour-of-day as the cyclic pair `hour_sin` + `hour_cos` (keep both as separate features — their *ratio* is tan(), which blows up twice a day at cos=0 and repeats every 12h; the pair encodes the clock cleanly).

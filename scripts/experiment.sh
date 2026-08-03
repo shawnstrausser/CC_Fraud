@@ -77,8 +77,8 @@ else
   scp -r "${SSH_OPTS[@]}" ec2-user@"$IP":"CC_Fraud/out/*" "$REPO_DIR/results/$RUN_NAME/"
   echo "--- fetched into results/$RUN_NAME/:"
   ls "$REPO_DIR/results/$RUN_NAME"
-  if [ -f "$REPO_DIR/results/$RUN_NAME/metrics.json" ]; then
-    cat "$REPO_DIR/results/$RUN_NAME/metrics.json"
+  if [ -f "$REPO_DIR/results/$RUN_NAME/eval_metadata.json" ]; then
+    cat "$REPO_DIR/results/$RUN_NAME/eval_metadata.json"
   fi
 fi
 # trap fires here -> teardown + paranoia sweep
