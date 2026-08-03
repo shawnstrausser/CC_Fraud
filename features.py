@@ -10,7 +10,8 @@ import numpy as np
 # EDA shortlist: the strongest univariate separators (fraud vs legit).
 SHORTLIST = ["V17", "V14", "V12", "V10", "V16", "V3"]
 
-FAMILIES = ("time", "interactions", "log_amount", "activity")
+FAMILIES = ("time", "interactions", "log_amount", "activity",
+            "squares", "night_interactions")
 
 
 def add(df, families):
@@ -38,6 +39,21 @@ def add(df, families):
 
     if "log_amount" in families:
         out["log_amount"] = np.log1p(out["Amount"])
+
+    if "squares" in families:
+        # Squared shortlist features: a line can then score "extreme in
+        # EITHER direction" — the two-tail pattern raw features can't express
+        # (EDA section 4's caveat, answered).
+        for f in SHORTLIST:
+            out[f"{f}_sq"] = out[f] ** 2
+
+    if "night_interactions" in families:
+        # "This value is more suspicious at 3am" — shortlist gated by the
+        # night flag. Recomputed here so the family works standalone.
+        hour = (out["Time"] / 3600) % 24
+        night = ((hour >= 0) & (hour < 6)).astype("float32")
+        for f in SHORTLIST:
+            out[f"night_x_{f}"] = night * out[f]
 
     if "activity" in families:
         # Transactions in this row's (absolute) hour — "how busy is the

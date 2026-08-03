@@ -41,7 +41,10 @@ def git_commit():
 @click.option("--features", "feature_families", multiple=True,
               type=click.Choice(features.FAMILIES),
               help="Feature families to add (repeatable): --features time --features interactions")
-def main(train_csv, out_dir, class_weight, feature_families):
+@click.option("--penalty", type=click.Choice(["l2", "l1"]), default="l2",
+              show_default=True,
+              help="l1 drives useless weights to exactly zero (feature selection).")
+def main(train_csv, out_dir, class_weight, feature_families, penalty):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     train = pd.read_csv(train_csv)
@@ -57,6 +60,9 @@ def main(train_csv, out_dir, class_weight, feature_families):
         ("model", LogisticRegression(
             max_iter=1000,
             class_weight=None if class_weight == "none" else class_weight,
+            penalty=penalty,
+            # lbfgs can't do l1; liblinear can.
+            solver="liblinear" if penalty == "l1" else "lbfgs",
         )),
     ])
     t0 = time.perf_counter()
@@ -64,14 +70,23 @@ def main(train_csv, out_dir, class_weight, feature_families):
     train_seconds = time.perf_counter() - t0
 
     joblib.dump(pipeline, out_dir / "model.joblib")
+
+    # Which columns did the model actually use? (L1 zeroes useless weights.)
+    col_names = list(features.add(X.head(1), feature_families).columns)
+    coefs = pipeline.named_steps["model"].coef_[0]
+    zeroed = [n for n, c in zip(col_names, coefs) if c == 0.0]
+
     meta = {
         "model": "logistic_regression",
         "config": {
             "class_weight": class_weight,
             "features": sorted(feature_families),
-            "n_input_columns": features.add(X.head(1), feature_families).shape[1],
+            "n_input_columns": len(col_names),
+            "penalty": penalty,
             "max_iter": 1000,
         },
+        "n_zeroed_coefficients": len(zeroed),
+        "zeroed_features": zeroed,
         "train_csv": str(train_csv),
         "train_rows": len(train),
         "train_frauds": int(y.sum()),
