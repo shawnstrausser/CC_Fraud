@@ -44,6 +44,17 @@ Baseline (logreg, unweighted): train PR-AUC 0.770, recall@0.5 0.62 (misses 158/4
 
 EDA findings (EDA.ipynb): fraud-rate spikes at night while volume is diurnal (burstiness, not smooth drift); fraud Amount is bimodal (~$1 card-testing + ~$120 cash-out); top univariate separators V17, V14, V12, V10, V16, V3 — all "narrow legit spike vs wide left fraud smear"; V-V correlations ≈ 0 (PCA), Amount correlates with V2/V5/V7/V20.
 
+### Error analysis (EDA.ipynb §8, 2026-08-03)
+
+The champion (`logreg-gen2-l2`, train PR-AUC 0.842) catches signature fraud with near-certainty (median score of caught frauds: 0.988) and misses 98/417 at threshold 0.5. The misses split two ways:
+
+- **~25–30 near-misses** scoring 0.1–0.5 — recoverable by threshold tuning, at a measurable precision cost.
+- **~60–70 camouflaged frauds** scoring below 0.01 (missed-group median: 0.0084) — confidently cleared, not narrowly missed. On the strongest separator V17, caught frauds sit at median −9.33 while missed frauds sit at **+0.55** — *indistinguishable from legit traffic (−0.04)*.
+
+Texture: the missed skew toward **daytime** (the caught have a distinct night bump around hours 3–5 — the night features and the extreme-V signature do their work in the dark; what escapes is the fraud that happens at 2pm looking boring) and toward **mid-range amounts** (log-amount 3–6, roughly $20–$400 — not the $1 card-tests, not the signature ~$120 bump, just ordinary-sized purchases).
+
+**Portrait of the escapee:** a mid-sized, daytime transaction whose anonymized features sit squarely inside normal traffic. The model isn't clumsy — these ~60–70 frauds carry almost no signal in the features we have. That's a fundamentally different diagnosis than underfitting, and it bounds what any model can do with this dataset: the escapees justify *new data sources* (merchant category, device fingerprint, per-card history — features that would re-illuminate the invisible), not more transforms of the existing 30 columns. Implications: the threshold sweep has a known prize (~25–30 frauds); XGBoost expectations are tempered (trees can't split on signal that isn't there); published PR-AUC ceilings in the high 0.8s on this dataset are consistent with an irreducible camouflaged remainder.
+
 ## Backlog
 
 1. Class-weighted logistic regression (`class_weight="balanced"`) — the baseline misses 158/417 train frauds at 0.5 because the loss treats fraud and non-fraud errors equally. Cheapest fix first. Prediction to test: recall@0.5 jumps but PR-AUC barely moves (weighting ≈ intercept shift for linear models).
