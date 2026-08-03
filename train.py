@@ -61,8 +61,10 @@ def main(train_csv, out_dir, class_weight, feature_families, penalty):
             max_iter=1000,
             class_weight=None if class_weight == "none" else class_weight,
             penalty=penalty,
-            # lbfgs can't do l1; liblinear can.
-            solver="liblinear" if penalty == "l1" else "lbfgs",
+            # liblinear for BOTH penalties (Shawn's call 2026-08-03): one
+            # optimizer across all runs makes configs comparable; costs speed
+            # vs lbfgs on l2.
+            solver="liblinear",
         )),
     ])
     t0 = time.perf_counter()

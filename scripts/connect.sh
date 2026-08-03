@@ -27,4 +27,5 @@ fi
 # for long-lived servers you care about.
 exec ssh -i "$PEM" \
   -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR \
+  -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
   "${TUNNEL[@]}" ec2-user@"$IP"

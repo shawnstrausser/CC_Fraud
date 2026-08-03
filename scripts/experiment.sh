@@ -17,7 +17,8 @@ REPO_DIR="$(cd "$DIR/.." && pwd)"
 TAG="cc-fraud"
 PEM=~/.ssh/cc-fraud-key.pem
 BUCKET="s3://cc-fraud-381491853558"
-SSH_OPTS=(-i "$PEM" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
+SSH_OPTS=(-i "$PEM" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR
+          -o ServerAliveInterval=30 -o ServerAliveCountMax=6)  # survive NAT/Wi-Fi silence on long runs
 
 RUN_NAME="${1:?usage: experiment.sh <RUN_NAME> [--script foo.py] [--notebook] [script options...]}"
 shift
@@ -80,5 +81,7 @@ else
   if [ -f "$REPO_DIR/results/$RUN_NAME/eval_metadata.json" ]; then
     cat "$REPO_DIR/results/$RUN_NAME/eval_metadata.json"
   fi
+  echo "--- leaderboard:"
+  python "$REPO_DIR/compare.py" || echo "(leaderboard update failed — run 'python compare.py' manually)"
 fi
 # trap fires here -> teardown + paranoia sweep

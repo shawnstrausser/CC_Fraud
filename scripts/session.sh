@@ -22,7 +22,9 @@ IP=$(aws ec2 describe-instances \
   --query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
 echo "Waiting for boot provisioning on $IP ..."
 until ssh -i "$PEM" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-      -o LogLevel=ERROR -o ConnectTimeout=5 ec2-user@"$IP" 'test -f ~/PROVISIONED' 2>/dev/null; do
+      -o LogLevel=ERROR -o ConnectTimeout=5 \
+      -o ServerAliveInterval=30 -o ServerAliveCountMax=6 \
+      ec2-user@"$IP" 'test -f ~/PROVISIONED' 2>/dev/null; do
   echo "  ...still provisioning (checking again in 15s)"
   sleep 15
 done

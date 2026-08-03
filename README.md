@@ -10,6 +10,7 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 | `data.py` | One-time frozen train/test split |
 | `train.py` | Fit + save the model artifact (`model.joblib` + `train_metadata.json`) |
 | `evaluate.py` | Score a saved model on any dataset → `eval_metadata.json`; also the one-shot test evaluator |
+| `compare.py` | Aggregate all results into `results/leaderboard.md` (auto-run by experiment.sh) |
 | `scripts/` | Session automation: `session.sh`, `launch.sh`, `connect.sh`, `teardown.sh` |
 | `infra/` | IAM policy documents |
 | `docs/runbook.md` | **The AWS runbook**: setup, per-session commands, gotchas |

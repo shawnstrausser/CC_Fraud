@@ -1,0 +1,28 @@
+{
+  "model": "logistic_regression",
+  "config": {
+    "class_weight": "none",
+    "features": [
+      "activity",
+      "interactions",
+      "log_amount",
+      "night_interactions",
+      "squares",
+      "time"
+    ],
+    "n_input_columns": 63,
+    "penalty": "l1",
+    "max_iter": 1000
+  },
+  "n_zeroed_coefficients": 3,
+  "zeroed_features": [
+    "V17xV16",
+    "V12xV3",
+    "V12_sq"
+  ],
+  "train_csv": "train.csv",
+  "train_rows": 227845,
+  "train_frauds": 417,
+  "train_seconds": 721.32,
+  "git_commit": "3238c99"
+}
