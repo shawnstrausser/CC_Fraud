@@ -83,6 +83,8 @@ Protocol amendment, decided before the run: this evaluation happened *before* th
      3. **Noise:** 417 frauds ÷ 24 hourly buckets ≈ 17 per bucket — rates are mostly variance; needs smoothing toward the global rate.
      The killer given our protocol: we evaluate on train only, and target-encoded features shine on train *precisely when they leak* — genuine signal and leakage are indistinguishable there. Revisit only with all three fixes built.
 9. When notebook history gets heavy: commit `EDA.ipynb` with outputs stripped and save key figures as PNGs in `figures/` (git keeps every historical output blob forever).
+10. **Deployment-cost evaluation** (planned, deferred 2026-08-03): extend `evaluate.py` with (a) a top-5%-by-Amount segment block (large transactions matter most; error analysis says escapees skew mid/large), and (b) a dollar-cost comparison — FN cost = transaction amount, FP cost = `--fp-cost` (default $1, sensitivity-check at $5/$10) — across three policies: fixed 0.5, cost-minimizing fixed threshold, and the per-transaction decision-theoretic rule `flag iff p × amount > fp_cost` (calibration's payoff). Full plan preserved in the plan file.
+11. **Outstanding obligation:** `xgb-default` still owes its one-shot test evaluation (pre-committed: run and report regardless of outcome) — do this together with item 10 so the final report lands in one pass.
 
 (Plus the walk-forward validation TODO above.)
 

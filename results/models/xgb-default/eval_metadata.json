@@ -1,0 +1,38 @@
+{
+  "model": "xgboost",
+  "config": {
+    "params": "xgboost defaults (100 trees, depth 6, lr 0.3)",
+    "random_state": 42,
+    "features": [],
+    "n_input_columns": 30
+  },
+  "n_zeroed_coefficients": 0,
+  "zeroed_features": [],
+  "train_csv": "train.csv",
+  "train_rows": 227845,
+  "train_frauds": 417,
+  "train_seconds": 3.98,
+  "git_commit": "2bff48e",
+  "eval_csv": "train.csv",
+  "eval_rows": 227845,
+  "eval_frauds": 417,
+  "threshold": 0.5,
+  "roc_auc": 0.9999557031652762,
+  "pr_auc": 0.9978184624236514,
+  "normalized_entropy": 0.006839169238143425,
+  "calibration_ratio": 1.0002223145659472,
+  "at_threshold_0.5": {
+    "precision": 1.0,
+    "recall": 0.9976019184652278,
+    "confusion_matrix": [
+      [
+        227428,
+        0
+      ],
+      [
+        1,
+        416
+      ]
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "model": "xgboost",
+  "config": {
+    "params": "xgboost defaults (100 trees, depth 6, lr 0.3)",
+    "random_state": 42,
+    "features": [],
+    "n_input_columns": 30
+  },
+  "n_zeroed_coefficients": 0,
+  "zeroed_features": [],
+  "train_csv": "train.csv",
+  "train_rows": 227845,
+  "train_frauds": 417,
+  "train_seconds": 3.98,
+  "git_commit": "2bff48e"
+}
