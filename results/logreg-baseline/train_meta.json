@@ -1,0 +1,12 @@
+{
+  "model": "logistic_regression",
+  "config": {
+    "class_weight": "none",
+    "max_iter": 1000
+  },
+  "train_csv": "train.csv",
+  "train_rows": 227845,
+  "train_frauds": 417,
+  "train_seconds": 1.69,
+  "git_commit": "0453992"
+}
