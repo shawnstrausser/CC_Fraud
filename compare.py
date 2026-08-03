@@ -16,7 +16,7 @@ if hasattr(sys.stdout, "reconfigure"):
 RESULTS = Path(__file__).parent / "results"
 
 rows = []
-for meta_path in sorted(RESULTS.glob("*/eval_metadata.json")):
+for meta_path in sorted(RESULTS.glob("models/*/eval_metadata.json")):
     m = json.loads(meta_path.read_text())
     cfg = m.get("config", {})
     rows.append({
