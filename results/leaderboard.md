@@ -5,6 +5,7 @@ All metrics are train-eval (see README → Evaluation protocol). Auto-generated 
 | Run | PR-AUC | ROC-AUC | NE | Calibration | Train s | Cols | Penalty | Commit |
 |---|---|---|---|---|---|---|---|---|
 | logreg-gen2-l1 | 0.8424 | 0.9850 | 0.208 | 1.00 | 721.32 | 63 | l1 | 3238c99 |
+| logreg-gen2-l2 | 0.8420 | 0.9850 | 0.209 | 1.02 | 23.74 | 63 | l2 | ba2e11b |
 | logreg-feat-all | 0.8277 | 0.9838 | 0.220 | 0.99 | 2.64 | 51 | l2 | 0953a31 |
 | logreg-baseline | 0.7696 | 0.9783 | 0.312 | 1.00 | 1.69 | ? | l2 | 0453992 |
 | logreg-balanced | 0.7340 | 0.9860 | 8.026 | 42.27 | 3.09 | ? | l2 | e39d637 |
