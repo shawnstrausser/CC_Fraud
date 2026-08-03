@@ -57,6 +57,12 @@ Texture: the missed skew toward **daytime** (the caught have a distinct night bu
 
 **Portrait of the escapee:** a mid-sized, daytime transaction whose anonymized features sit squarely inside normal traffic. The model isn't clumsy — these ~60–70 frauds carry almost no signal in the features we have. That's a fundamentally different diagnosis than underfitting, and it bounds what any model can do with this dataset: the escapees justify *new data sources* (merchant category, device fingerprint, per-card history — features that would re-illuminate the invisible), not more transforms of the existing 30 columns. Implications: the threshold sweep has a known prize (~25–30 frauds); XGBoost expectations are tempered (trees can't split on signal that isn't there); published PR-AUC ceilings in the high 0.8s on this dataset are consistent with an irreducible camouflaged remainder.
 
+### Final logreg verdict (one-shot test evaluation, 2026-08-03)
+
+The logreg track is **closed**. Champion `logreg-gen3` (97 features, l2) on the frozen test set: **PR-AUC 0.8007** (train-eval claimed 0.8550 — the 5.4-point gap is the measured, combined price of generalization loss, train-eval selection optimism, the test period's lower base rate, and ±noise from 75 test frauds). ROC-AUC 0.977, NE 0.252, calibration ratio 1.08 (the model tracked the period's lower fraud rate through its features — not anchored to the training base rate). At threshold 0.5: recall 0.693 (52/75), precision **0.945** (3 false alarms in 56,962 transactions). Result in `results/test-eval-gen3/`.
+
+Protocol amendment, decided before the run: this evaluation happened *before* the XGBoost track (an early spend of the one-shot). Pre-committed rules: this number is final for logreg regardless of anything later; XGBoost will be evaluated on test at the end of its track regardless of outcome; both finals reported side by side. The early peek slightly contaminates the eventual comparison (XGBoost development proceeds knowing the target) and is documented here for honesty.
+
 ## Backlog
 
 1. Class-weighted logistic regression (`class_weight="balanced"`) — the baseline misses 158/417 train frauds at 0.5 because the loss treats fraud and non-fraud errors equally. Cheapest fix first. Prediction to test: recall@0.5 jumps but PR-AUC barely moves (weighting ≈ intercept shift for linear models).

@@ -44,20 +44,24 @@ def git_commit():
 @click.option("--penalty", type=click.Choice(["l2", "l1"]), default="l2",
               show_default=True,
               help="l1 drives useless weights to exactly zero (feature selection).")
-def main(train_csv, out_dir, class_weight, feature_families, penalty):
+@click.option("--model", "model_name", type=click.Choice(["logreg", "xgboost"]),
+              default="logreg", show_default=True,
+              help="xgboost uses library defaults (100 trees, depth 6) + fixed seed.")
+def main(train_csv, out_dir, class_weight, feature_families, penalty, model_name):
     out_dir.mkdir(parents=True, exist_ok=True)
 
     train = pd.read_csv(train_csv)
     X, y = train.drop(columns=["Class"]), train["Class"]
 
-    # One artifact = feature engineering + preprocessing + model. The feature
-    # step lives INSIDE the pipeline so the saved model takes raw columns —
-    # evaluate.py and any future serving code need zero knowledge of features.
-    pipeline = Pipeline([
-        ("features", FunctionTransformer(
-            partial(features.add, families=list(feature_families)))),
-        ("scaler", StandardScaler()),
-        ("model", LogisticRegression(
+    if model_name == "xgboost":
+        from xgboost import XGBClassifier
+        # Library defaults (Shawn's call): 100 trees, depth 6, lr 0.3.
+        # Fixed seed for reproducibility; aucpr matches our headline metric.
+        clf = XGBClassifier(n_jobs=-1, random_state=42, eval_metric="aucpr")
+        model_config = {"params": "xgboost defaults (100 trees, depth 6, lr 0.3)",
+                        "random_state": 42}
+    else:
+        clf = LogisticRegression(
             max_iter=1000,
             class_weight=None if class_weight == "none" else class_weight,
             penalty=penalty,
@@ -65,7 +69,19 @@ def main(train_csv, out_dir, class_weight, feature_families, penalty):
             # optimizer across all runs makes configs comparable; costs speed
             # vs lbfgs on l2.
             solver="liblinear",
-        )),
+        )
+        model_config = {"class_weight": class_weight, "penalty": penalty,
+                        "max_iter": 1000}
+
+    # One artifact = feature engineering + preprocessing + model. The feature
+    # step lives INSIDE the pipeline so the saved model takes raw columns —
+    # evaluate.py and any future serving code need zero knowledge of features.
+    # (Scaler is a no-op for trees but harmless; kept for uniformity.)
+    pipeline = Pipeline([
+        ("features", FunctionTransformer(
+            partial(features.add, families=list(feature_families)))),
+        ("scaler", StandardScaler()),
+        ("model", clf),
     ])
     t0 = time.perf_counter()
     pipeline.fit(X, y)
@@ -73,19 +89,19 @@ def main(train_csv, out_dir, class_weight, feature_families, penalty):
 
     joblib.dump(pipeline, out_dir / "model.joblib")
 
-    # Which columns did the model actually use? (L1 zeroes useless weights.)
+    # Which columns did the model actually use? (L1 zeroes useless weights;
+    # tree models have no coefficients — skip.)
     col_names = list(features.add(X.head(1), feature_families).columns)
-    coefs = pipeline.named_steps["model"].coef_[0]
-    zeroed = [n for n, c in zip(col_names, coefs) if c == 0.0]
+    fitted = pipeline.named_steps["model"]
+    zeroed = ([n for n, c in zip(col_names, fitted.coef_[0]) if c == 0.0]
+              if hasattr(fitted, "coef_") else [])
 
     meta = {
-        "model": "logistic_regression",
+        "model": model_name,
         "config": {
-            "class_weight": class_weight,
+            **model_config,
             "features": sorted(feature_families),
             "n_input_columns": len(col_names),
-            "penalty": penalty,
-            "max_iter": 1000,
         },
         "n_zeroed_coefficients": len(zeroed),
         "zeroed_features": zeroed,
