@@ -55,6 +55,11 @@ Total cloud spend: ~$2.
 
 ## Transfer manifest for fraud-at-scale
 
+**Transfer method (decided 2026-08-03): copy + parameterize** — gather all
+hardcoded constants (bucket, repo URL, tag, instance type, region, pip list)
+into a single `scripts/config.sh` sourced by every script. Rule of three:
+abstract into a cookiecutter template only if a third project appears.
+
 Copy nearly verbatim: `scripts/` (parameterize bucket/repo/tag at top),
 `evaluate.py`, `compare.py`, `.gitattributes`, `.gitignore` hygiene,
 `docs/runbook.md` gotchas. Redesign for scale: data loading (Parquet,
