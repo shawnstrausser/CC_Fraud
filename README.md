@@ -14,6 +14,7 @@ Binary classification on the [Kaggle Credit Card Fraud dataset](https://www.kagg
 | `scripts/` | Session automation: `session.sh`, `launch.sh`, `connect.sh`, `teardown.sh` |
 | `infra/` | IAM policy documents |
 | `docs/runbook.md` | **The AWS runbook**: setup, per-session commands, gotchas |
+| `RETROSPECTIVE.md` | Project retro: what worked, what cost tuition, transfer manifest for the next project |
 
 ## Quick start (per session)
 
