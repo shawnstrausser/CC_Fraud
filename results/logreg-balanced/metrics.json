@@ -1,0 +1,34 @@
+{
+  "model": "logistic_regression",
+  "config": {
+    "class_weight": "balanced",
+    "max_iter": 1000
+  },
+  "train_csv": "train.csv",
+  "train_rows": 227845,
+  "train_frauds": 417,
+  "train_seconds": 3.09,
+  "git_commit": "e39d637",
+  "eval_csv": "train.csv",
+  "eval_rows": 227845,
+  "eval_frauds": 417,
+  "threshold": 0.5,
+  "roc_auc": 0.9860464179793229,
+  "pr_auc": 0.7340168891788769,
+  "normalized_entropy": 8.025513444456827,
+  "calibration_ratio": 42.26634418799958,
+  "at_threshold_0.5": {
+    "precision": 0.07709207110045936,
+    "recall": 0.9256594724220624,
+    "confusion_matrix": [
+      [
+        222807,
+        4621
+      ],
+      [
+        31,
+        386
+      ]
+    ]
+  }
+}

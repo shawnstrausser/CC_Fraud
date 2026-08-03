@@ -33,9 +33,11 @@ done
 TRAIN_ARGS=("$@")
 
 # --- Safety: servers only run committed, pushed code -------------------------
+# results/ is exempt: those are run OUTPUTS the server never reads — they can't
+# cause the stale-code bug this guard exists to prevent.
 cd "$REPO_DIR"
-if [ -n "$(git status --porcelain)" ]; then
-  echo "ABORT: uncommitted changes. Commit (and push) first."; exit 1
+if [ -n "$(git status --porcelain -- . ':!results')" ]; then
+  echo "ABORT: uncommitted CODE changes. Commit (and push) first."; exit 1
 fi
 if [ "$(git rev-list origin/main..main --count)" -gt 0 ]; then
   echo "ABORT: local commits not pushed. Run: git push"; exit 1
